@@ -11,7 +11,9 @@ concurrency: { group: pages, cancel-in-progress: true }
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
-    environment: { name: github-pages, url: ${{ steps.d.outputs.page_url }} }
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -19,10 +21,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
       - name: Build
-        env: { CLICKUP_API_TOKEN: "${{ secrets.CLICKUP_API_TOKEN }}" }
+        env:
+          CLICKUP_API_TOKEN: ${{ secrets.CLICKUP_API_TOKEN }}
         run: python build.py
       - name: Encrypt
-        env: { PW: "${{ secrets.DASHBOARD_PASSWORD }}" }
+        env:
+          PW: ${{ secrets.DASHBOARD_PASSWORD }}
         run: |
           npx --yes staticrypt@3 out/index.html -p "$PW" -s 3cebbba0d4f952f38b8f3d82fc7d5ac7 --short --remember 30 -d site \
             --template-title "Tareas CHV" --template-instructions "Ingresá la contraseña para ver el tablero." \
