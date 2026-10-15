@@ -1,0 +1,38 @@
+name: Dashboard
+on:
+  schedule:
+    - cron: "17 10-23,0-2 * * *"   # :17 de 07 a 23 hs ART (UTC-3)
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency: { group: pages, cancel-in-progress: true }
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: ${{ steps.d.outputs.page_url }} }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Build
+        env: { CLICKUP_API_TOKEN: "${{ secrets.CLICKUP_API_TOKEN }}" }
+        run: python build.py
+      - name: Encrypt
+        env: { PW: "${{ secrets.DASHBOARD_PASSWORD }}" }
+        run: |
+          npx --yes staticrypt@3 out/index.html -p "$PW" -s 3cebbba0d4f952f38b8f3d82fc7d5ac7 --short --remember 30 -d site \
+            --template-title "Tareas CHV" --template-instructions "Ingresá la contraseña para ver el tablero." \
+            --template-placeholder "Contraseña" --template-remember "Recordarme" --template-button "Entrar" \
+            --template-error "Contraseña incorrecta" --template-color-primary "#1a73e8" --template-color-secondary "#f6f7f9"
+          sed -i 's|<head>|<head><meta name="robots" content="noindex,nofollow">|' site/index.html
+          printf 'User-agent: *\nDisallow: /\n' > site/robots.txt
+          rm -rf out
+          ! grep -q 'class="t"' site/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - id: d
+        uses: actions/deploy-pages@v4
